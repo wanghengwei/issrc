@@ -364,7 +364,7 @@ type
 
     SetupDirectiveLines: array[TSetupSectionDirectives] of Integer;
     UseSetupLdr, DiskSpanning, BackSolid, TerminalServicesAware: Boolean;
-    DiskSliceSize, DiskClusterSize, SlicesPerDisk, ReserveBytes: Longint;
+    DiskSliceSize, DiskClusterSize, SlicesPerDisk, ReserveBytes: Int64;
     LicenseFile, InfoBeforeFile, InfoAfterFile, WizardImageFile: String;
     WizardSmallImageFile: String;
     DefaultDialogFontName: String;
@@ -527,7 +527,7 @@ const
 
   DefaultTypeEntryNames: array[0..2] of PChar = ('full', 'compact', 'custom');
 
-  MaxDiskSliceSize = 2100000000;
+  MaxDiskSliceSize:Int64 = 5000000000;
 
 type
   TColor = $7FFFFFFF-1..$7FFFFFFF;
@@ -1323,7 +1323,7 @@ type
     FDestFileIsDiskSlice: Boolean;
     FInitialBytesCompressedSoFar: Integer64;
     FSliceBaseOffset: Cardinal;
-    FSliceBytesLeft: Cardinal;
+    FSliceBytesLeft: Int64;
     procedure EndSlice;
     procedure NewSlice(const Filename: String);
   public
@@ -1430,7 +1430,7 @@ begin
     FDestFile := TFile.Create(Filename, fdOpenExisting, faReadWrite, fsNone);
     FDestFile.SeekToEnd;
     FSliceBaseOffset := FDestFile.Position.Lo;
-    FSliceBytesLeft := Cardinal(FCompiler.DiskSliceSize) - FSliceBaseOffset;
+    FSliceBytesLeft := Int64(FCompiler.DiskSliceSize) - FSliceBaseOffset;
   end;
 end;
 
@@ -1578,15 +1578,16 @@ end;
 procedure TCompressionHandler.WriteProc(const Buf; BufSize: Longint);
 var
   P, P2: Pointer;
-  S: Cardinal;
+  S: Int64;
 begin
   FCompiler.CallIdleProc;
   P := @Buf;
+  //FCompiler.AbortCompileFmt('left=%d', [FSliceBytesLeft]);
   while BufSize > 0 do begin
     S := BufSize;
     if FSliceBytesLeft = 0 then
       NewSlice('');
-    if S > Cardinal(FSliceBytesLeft) then
+    if S > FSliceBytesLeft then
       S := FSliceBytesLeft;
 
     if not FChunkEncrypted then
